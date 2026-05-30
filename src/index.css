@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+/* Adding a subtle background color for the whole app */
+body {
+  @apply bg-gray-50;
+}
