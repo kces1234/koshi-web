@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
-import { collection, addDoc, getDocs, doc, deleteDoc, serverTimestamp } from "firebase/firestore";
+// Added updateDoc to the imports
+import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase";
 
 export default function TeacherManagement() {
   const [classes, setClasses] = useState([]);
   const [teachers, setTeachers] = useState([]);
   
-  // Form State
+  // Form & Edit State
   const [selectedClassId, setSelectedClassId] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
+  const [editingTeacherId, setEditingTeacherId] = useState(null); // Tracks if we are editing
   const [formData, setFormData] = useState({
     teacherName: "", mobile: "", username: "", password: ""
   });
@@ -32,37 +34,72 @@ export default function TeacherManagement() {
     fetchTeachers();
   }, []);
 
-  // 3. Handle Add Teacher
-  const handleAddTeacher = async (e) => {
+  // Reset Form Helper
+  const resetForm = () => {
+    setFormData({ teacherName: "", mobile: "", username: "", password: "" });
+    setSelectedClassId("");
+    setSelectedSection("");
+    setEditingTeacherId(null);
+  };
+
+  // 3. Handle Add OR Update Teacher
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       // Find the class name so we can save it for easy display
       const activeClass = classes.find(c => c.id === selectedClassId);
       
-      await addDoc(collection(db, "teachers"), {
+      const teacherData = {
         ...formData,
         classId: selectedClassId,
         className: activeClass ? activeClass.name : "",
         section: selectedSection,
-        role: "teacher", // Strict role assignment
-        createdAt: serverTimestamp()
-      });
+        role: "teacher" // Strict role assignment
+      };
+
+      if (editingTeacherId) {
+        // --- UPDATE EXISTING TEACHER ---
+        const teacherRef = doc(db, "teachers", editingTeacherId);
+        await updateDoc(teacherRef, teacherData);
+        alert("Teacher Account Updated!");
+      } else {
+        // --- CREATE NEW TEACHER ---
+        await addDoc(collection(db, "teachers"), {
+          ...teacherData,
+          createdAt: serverTimestamp()
+        });
+        alert("Teacher Account Created!");
+      }
       
-      setFormData({ teacherName: "", mobile: "", username: "", password: "" });
-      setSelectedClassId("");
-      setSelectedSection("");
+      resetForm();
       fetchTeachers(); // Refresh list
-      alert("Teacher Account Created!");
     } catch (error) {
-      console.error("Error adding teacher:", error);
-      alert("Failed to create teacher.");
+      console.error("Error saving teacher:", error);
+      alert("Failed to save teacher details.");
     }
   };
 
-  // 4. Handle Delete Teacher
+  // 4. Handle Edit Button Click
+  const handleEditClick = (teacher) => {
+    setEditingTeacherId(teacher.id);
+    setSelectedClassId(teacher.classId);
+    setSelectedSection(teacher.section);
+    setFormData({
+      teacherName: teacher.teacherName,
+      mobile: teacher.mobile,
+      username: teacher.username,
+      password: teacher.password
+    });
+    // Scroll to top of the page smoothly so the admin sees the form
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // 5. Handle Delete Teacher
   const handleDeleteTeacher = async (id, name) => {
     if(window.confirm(`Are you sure you want to remove ${name}?`)) {
       await deleteDoc(doc(db, "teachers", id));
+      // If the admin deleted the user they were currently editing, reset the form
+      if (editingTeacherId === id) resetForm();
       fetchTeachers();
     }
   };
@@ -70,13 +107,23 @@ export default function TeacherManagement() {
   const activeClass = classes.find(c => c.id === selectedClassId);
 
   return (
-    <div className="pb-10">
+    <div className="pb-10 animate-fade-in">
       <h1 className="text-3xl font-bold text-gray-800 mb-8 border-b pb-4">Teacher & Staff Management</h1>
 
-      {/* --- ADD TEACHER FORM --- */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-8 border-l-4 border-l-indigo-500">
-        <h2 className="text-xl font-semibold mb-4 text-indigo-700">Onboard New Class Teacher</h2>
-        <form onSubmit={handleAddTeacher} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* --- ADD / EDIT TEACHER FORM --- */}
+      <div className={`bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-8 border-l-4 transition-colors ${editingTeacherId ? 'border-l-amber-500' : 'border-l-indigo-500'}`}>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className={`text-xl font-semibold ${editingTeacherId ? 'text-amber-600' : 'text-indigo-700'}`}>
+            {editingTeacherId ? "Edit Class Teacher Details" : "Onboard New Class Teacher"}
+          </h2>
+          {editingTeacherId && (
+            <span className="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full animate-pulse">
+              Edit Mode Active
+            </span>
+          )}
+        </div>
+
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
           
           <input required type="text" placeholder="Teacher's Full Name" className="border p-2 rounded outline-none focus:border-indigo-500"
             value={formData.teacherName} onChange={e => setFormData({...formData, teacherName: e.target.value})} />
@@ -104,9 +151,18 @@ export default function TeacherManagement() {
           <input required type="text" placeholder="Set Login Password" className="border p-2 rounded outline-none focus:border-indigo-500 bg-indigo-50 font-medium"
             value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
 
-          <button type="submit" className="md:col-span-3 bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 transition font-bold mt-2 shadow-sm">
-            + Create Teacher Portal Account
-          </button>
+          {/* Action Buttons */}
+          <div className="md:col-span-3 flex gap-4 mt-2">
+            <button type="submit" className={`flex-1 text-white p-3 rounded-lg transition font-bold shadow-sm ${editingTeacherId ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+              {editingTeacherId ? "Save Changes" : "+ Create Teacher Portal Account"}
+            </button>
+            
+            {editingTeacherId && (
+              <button type="button" onClick={resetForm} className="bg-gray-300 hover:bg-gray-400 text-gray-800 p-3 rounded-lg transition font-bold shadow-sm px-8">
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -132,7 +188,7 @@ export default function TeacherManagement() {
                 <tr><td colSpan="5" className="p-8 text-center text-gray-500 italic">No teachers onboarded yet.</td></tr>
               ) : (
                 teachers.map(teacher => (
-                  <tr key={teacher.id} className="hover:bg-gray-50 border-b text-sm transition">
+                  <tr key={teacher.id} className={`hover:bg-gray-50 border-b text-sm transition ${editingTeacherId === teacher.id ? 'bg-amber-50' : ''}`}>
                     <td className="p-4">
                       <div className="font-bold text-gray-900">{teacher.teacherName}</div>
                       <div className="text-xs text-gray-500">Ph: {teacher.mobile}</div>
@@ -144,10 +200,15 @@ export default function TeacherManagement() {
                     </td>
                     <td className="p-4 font-mono text-indigo-600 font-semibold">{teacher.username}</td>
                     <td className="p-4 text-center font-mono text-gray-500">{teacher.password}</td>
-                    <td className="p-4 text-right">
-                      <button onClick={() => handleDeleteTeacher(teacher.id, teacher.teacherName)} className="text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 transition">
-                        Remove
-                      </button>
+                    <td className="p-4">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => handleEditClick(teacher)} className="text-blue-500 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50 transition">
+                          Edit
+                        </button>
+                        <button onClick={() => handleDeleteTeacher(teacher.id, teacher.teacherName)} className="text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 transition">
+                          Remove
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

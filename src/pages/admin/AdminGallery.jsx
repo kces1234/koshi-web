@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp, query, orderBy } from "firebase/firestore";
+// Added 'limit' to the Firebase imports
+import { collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp, query, orderBy, limit } from "firebase/firestore";
 import { db } from "../../firebase";
 
 export default function AdminGallery() {
@@ -7,13 +8,14 @@ export default function AdminGallery() {
   const [uploading, setUploading] = useState(false);
 
   // --- CLOUDINARY CONFIG ---
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;; 
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME; 
   const uploadPreset = "koshi_gallery"; 
 
-  // Fetch existing images from Firebase
+  // Fetch existing images from Firebase (Limited to 3)
   const fetchImages = async () => {
     try {
-      const q = query(collection(db, "gallery"), orderBy("timestamp", "desc"));
+      // Added limit(3) to the query
+      const q = query(collection(db, "gallery"), orderBy("timestamp", "desc"), limit(3));
       const snap = await getDocs(q);
       setImages(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (error) {
@@ -27,18 +29,25 @@ export default function AdminGallery() {
 
   // Handle Image Upload
   const handleUpload = async (e) => {
+    // 1. Guard check: Prevent upload if 3 images already exist
+    if (images.length >= 3) {
+      alert("Maximum limit reached! You can only have up to 3 images in the gallery. Please delete one before uploading a new photo.");
+      e.target.value = null; // Clear the input
+      return;
+    }
+
     const file = e.target.files[0];
     if (!file) return;
 
     setUploading(true);
 
-    // 1. Prepare data for Cloudinary
+    // 2. Prepare data for Cloudinary
     const formData = new FormData();
     formData.append("file", file);
     formData.append("upload_preset", uploadPreset);
 
     try {
-      // 2. Upload directly to Cloudinary
+      // 3. Upload directly to Cloudinary
       const cloudinaryRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
         method: "POST",
         body: formData,
@@ -46,7 +55,7 @@ export default function AdminGallery() {
       const cloudData = await cloudinaryRes.json();
 
       if (cloudData.secure_url) {
-        // 3. Save the secure URL to Firebase Firestore
+        // 4. Save the secure URL to Firebase Firestore
         await addDoc(collection(db, "gallery"), {
           url: cloudData.secure_url,
           timestamp: serverTimestamp()
@@ -79,18 +88,29 @@ export default function AdminGallery() {
 
   return (
     <div className="pb-10 animate-fade-in">
-      <h1 className="text-3xl font-bold text-gray-800 mb-8 border-b pb-4">Manage Campus Gallery</h1>
+      <div className="flex justify-between items-end mb-8 border-b pb-4">
+        <h1 className="text-3xl font-bold text-gray-800">Manage Campus Gallery</h1>
+        <span className="text-sm font-bold bg-blue-100 text-[#003b8b] px-3 py-1 rounded-full">
+          {images.length} / 3 Images Used
+        </span>
+      </div>
 
       {/* Upload Control */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8 flex items-center justify-between">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-[#003b8b] mb-1">Upload New Photo</h2>
-          <p className="text-sm text-gray-500">Supported formats: JPG, PNG, WEBP. High-quality images are automatically compressed.</p>
+          <p className="text-sm text-gray-500">Supported formats: JPG, PNG, WEBP. Maximum 3 images allowed.</p>
         </div>
         
-        <label className={`cursor-pointer px-6 py-3 rounded-xl font-bold text-white shadow-md transition ${uploading ? 'bg-gray-400' : 'bg-[#003b8b] hover:bg-blue-900'}`}>
-          {uploading ? "Uploading to Cloud..." : "+ Select & Upload Image"}
-          <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} className="hidden" />
+        <label className={`cursor-pointer px-6 py-3 rounded-xl font-bold text-white shadow-md transition ${uploading || images.length >= 3 ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#003b8b] hover:bg-blue-900'}`}>
+          {uploading ? "Uploading to Cloud..." : images.length >= 3 ? "Limit Reached" : "+ Select & Upload Image"}
+          <input 
+            type="file" 
+            accept="image/*" 
+            onChange={handleUpload} 
+            disabled={uploading || images.length >= 3} 
+            className="hidden" 
+          />
         </label>
       </div>
 
@@ -102,7 +122,7 @@ export default function AdminGallery() {
               <img src={img.url} alt="Campus" className="w-full h-full object-cover" />
               {/* Hover Delete Button */}
               <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => handleDelete(img.id)} className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-500">
+                <button onClick={() => handleDelete(img.id)} className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-500 shadow-lg transform hover:scale-105 transition">
                   Remove Image
                 </button>
               </div>

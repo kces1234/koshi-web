@@ -103,18 +103,31 @@ export default function AdminAttendance() {
 
   // --- EXPORT MONTHLY REPORT (CSV) ---
   // --- EXPORT MONTHLY REPORT (CSV) ---
+ // --- EXPORT MONTHLY REPORT (CSV) ---
   const handleExportReport = async () => {
     if (!selectedClassId || !selectedSection || !reportMonth) {
-      alert("Select Class, Section, and Month first."); return;
+      alert("Select Class, Section, and Month first."); 
+      return;
     }
     setLoading(true);
     try {
-      // Get all days in the selected month
+      // 1. Fetch Students explicitly right now so we guarantee they are in the report
+      const studentQuery = query(collection(db, "students"), where("classId", "==", selectedClassId), where("section", "==", selectedSection));
+      const studentSnap = await getDocs(studentQuery);
+      const currentStudents = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Guard check: Stop if no students exist
+      if (currentStudents.length === 0) {
+        alert("⚠️ No students found for this class and section. Make sure students are added to the database!");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Get all days in the selected month
       const [year, month] = reportMonth.split("-");
       const daysInMonth = new Date(year, month, 0).getDate();
       
-      // FIX: Query only by Class and Section to avoid Firebase Index errors, 
-      // then filter the dates manually in Javascript!
+      // 3. Fetch Attendance
       const q = query(
         collection(db, "attendance"), 
         where("classId", "==", selectedClassId), 
@@ -122,18 +135,18 @@ export default function AdminAttendance() {
       );
       const snap = await getDocs(q);
       
-      // Map data: { "YYYY-MM-DD": { studentId: "Present", ... } }
+      // 4. Map data: { "YYYY-MM-DD": { studentId: "Present", ... } }
       const monthData = {};
       snap.forEach(doc => { 
         const recordDate = doc.data().date;
-        // Only grab records that match our selected YYYY-MM
         if (recordDate && recordDate.startsWith(reportMonth)) {
           monthData[recordDate] = doc.data().records; 
         }
       });
 
-      // Build CSV String
-      let csvContent = `Monthly Attendance Report, ${reportMonth}\n`;
+      // 5. Build CSV String (\uFEFF tells Excel to read the text encoding properly)
+      let csvContent = "\uFEFF"; 
+      csvContent += `Monthly Attendance Report, ${reportMonth}\n`;
       csvContent += `Class:, ${classes.find(c => c.id === selectedClassId)?.name}, Section:, ${selectedSection}\n\n`;
       
       // Headers
@@ -142,9 +155,13 @@ export default function AdminAttendance() {
       headers.push("Total Present", "Total Absent", "Total Holidays");
       csvContent += headers.join(",") + "\n";
 
-      // Rows
-      students.forEach(student => {
-        let row = [`${student.rollNo}`, `"${student.studentName}"`];
+      // 6. Rows
+      currentStudents.forEach(student => {
+        // Fallbacks in case your database uses 'name' instead of 'studentName'
+        let name = student.studentName || student.name || "Unknown";
+        let roll = student.rollNo || student.roll || "N/A";
+
+        let row = [`${roll}`, `"${name}"`];
         let present = 0, absent = 0, holiday = 0;
 
         for(let i=1; i<=daysInMonth; i++) {
@@ -154,13 +171,13 @@ export default function AdminAttendance() {
           if (status === "Present") { present++; row.push("P"); }
           else if (status === "Absent") { absent++; row.push("A"); }
           else if (status === "Holiday") { holiday++; row.push("H"); }
-          else row.push("-"); // Not marked
+          else row.push("-"); 
         }
         row.push(present, absent, holiday);
         csvContent += row.join(",") + "\n";
       });
 
-      // Trigger Download
+      // 7. Trigger Download
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -177,7 +194,6 @@ export default function AdminAttendance() {
     }
     setLoading(false);
   };
-
   const showMessage = (msg, isError = false) => {
     setMessage(msg);
     setTimeout(() => setMessage(""), 4000);

@@ -286,7 +286,7 @@ export default function AdminPromotion() {
       <div className="bg-red-50 border-2 border-red-600 p-6 rounded-xl shadow-sm">
         <h2 className="text-2xl font-black text-red-700 mb-2">🛑 Database Danger Zone (Yearly Reset)</h2>
         <p className="text-red-900 font-medium mb-6">
-          This action will permanently wipe out <strong>ALL Student Attendance</strong>, <strong>ALL Teacher Attendance</strong>, and <strong>ALL Exam Results</strong> for the entire school to clear space in your Firebase Free Tier for the new academic year. Student Profiles, Teachers, Classes, and Subjects will NOT be deleted. 
+          This action will permanently wipe out <strong>ALL Student Attendance</strong>, <strong>ALL Teacher Attendance</strong>, and <strong>ALL Exam Results</strong> for the entire school to clear space in your DATABASE for the new academic year. Student Profiles, Teachers, Classes, and Subjects will NOT be deleted. 
         </p>
         
         <button 

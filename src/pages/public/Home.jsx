@@ -35,8 +35,6 @@ export default function Home() {
     <div className="font-sans text-gray-800 bg-[#f4f7fb] min-h-screen">
 
       {/* HEADER & NAVBAR */}
-      {/* HEADER & NAVBAR */}
-      {/* HEADER & NAVBAR */}
       <header className="bg-[#003b8b] text-white py-4 px-6 md:px-8 shadow-md sticky top-0 z-50">
         <div className="flex justify-between items-center">
 
@@ -72,7 +70,7 @@ export default function Home() {
           <nav className="hidden md:flex items-center gap-6 font-medium text-base">
             <button onClick={() => scrollToSection('home')} className="hover:text-[#ffd000] transition outline-none">Home</button>
             <button onClick={() => scrollToSection('about')} className="hover:text-[#ffd000] transition outline-none">About</button>
-            <button onClick={() => scrollToSection('contact')} className="hover:text-[#ffd000] transition outline-none">Admissions</button>
+            <button onClick={() => scrollToSection('student-portal')} className="hover:text-[#ffd000] transition outline-none">Student Portal</button>
             <button onClick={() => scrollToSection('gallery')} className="hover:text-[#ffd000] transition outline-none">Gallery</button>
             <button onClick={() => scrollToSection('contact')} className="hover:text-[#ffd000] transition outline-none">Contact</button>
 
@@ -85,12 +83,12 @@ export default function Home() {
           </nav>
         </div>
 
-        {/* Mobile Dropdown Menu */}
+        {/* Mobile Dropdown Menu (UPDATED FOR ABSOLUTE OVERLAY) */}
         {isMobileMenuOpen && (
-          <nav className="md:hidden flex flex-col items-center gap-4 pt-6 pb-4 mt-4 border-t border-blue-800 font-medium animate-fade-in">
+          <nav className="md:hidden absolute top-full left-0 w-full bg-[#003b8b] flex flex-col items-center gap-4 py-6 border-t border-blue-800 font-medium animate-fade-in shadow-xl z-40">
             <button onClick={() => scrollToSection('home')} className="hover:text-[#ffd000] transition outline-none w-full text-center py-2">Home</button>
             <button onClick={() => scrollToSection('about')} className="hover:text-[#ffd000] transition outline-none w-full text-center py-2">About</button>
-            <button onClick={() => scrollToSection('contact')} className="hover:text-[#ffd000] transition outline-none w-full text-center py-2">Admissions</button>
+            <button onClick={() => scrollToSection('student-portal')} className="hover:text-[#ffd000] transition outline-none w-full text-center py-2">Student Portal</button>
             <button onClick={() => scrollToSection('gallery')} className="hover:text-[#ffd000] transition outline-none w-full text-center py-2">Gallery</button>
             <button onClick={() => scrollToSection('contact')} className="hover:text-[#ffd000] transition outline-none w-full text-center py-2">Contact</button>
 
@@ -103,6 +101,7 @@ export default function Home() {
           </nav>
         )}
       </header>
+      
       {/* HERO SECTION */}
       <section
         id="home"
@@ -145,7 +144,7 @@ export default function Home() {
       </section>
 
       {/* STUDENT PORTAL SECTION */}
-      <section className="px-4 md:px-8 max-w-7xl mx-auto mb-20">
+      <section id="student-portal" className="px-4 md:px-8 max-w-7xl mx-auto mb-20 scroll-mt-20">
         <div className="bg-[#003b8b] rounded-3xl p-6 md:p-12 shadow-2xl">
           <div className="text-center mb-10">
             <h2 className="text-white text-3xl md:text-4xl font-bold mb-3">Student Portal</h2>
@@ -199,21 +198,15 @@ export default function Home() {
       </section>
 
       {/* GALLERY SECTION */}
-     
-      <div>
-
-
-        {/* Drop the dynamic gallery right here */}
+      <section id="gallery" className="scroll-mt-20">
         <CampusGallery />
-
-
-      </div>
+      </section>
       
 
       {/* CONTACT / ADMISSIONS SECTION */}
       <section id="contact" className="py-16 px-6 md:px-8 max-w-7xl mx-auto bg-white rounded-t-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.05)] scroll-mt-20">
         <div className="text-center mb-12">
-          <h2 className="text-[#003b8b] text-3xl md:text-4xl font-bold mb-3">Contact Us & Admissions</h2>
+          <h2 className="text-[#003b8b] text-3xl md:text-4xl font-bold mb-3">Contact Us </h2>
           <p className="text-gray-500 text-base md:text-lg">Reach out to us for admission inquiries and support</p>
         </div>
 
