@@ -106,7 +106,7 @@ export default function Home() {
       <section
         id="home"
         className="h-[75vh] md:h-[90vh] bg-cover bg-center flex items-center justify-center text-center text-white px-6 relative scroll-mt-20"
-        style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('/hero.png')" }}
+        style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('/hero.webp')" }}
       >
         
         <div className="max-w-4xl z-10">
